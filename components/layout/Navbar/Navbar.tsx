@@ -8,6 +8,7 @@ import { isPasskeySupported } from "@/lib/passkeys";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/components/ui/CommandPalette";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import InstallPWAButton from "@/components/ui/InstallPWAButton";
+import PendingTransactionsTracker from "@/components/layout/Navbar/PendingTransactionsTracker";
 
 const navLinks = [
   { label: "Home", href: "#" },
@@ -271,6 +272,7 @@ export default function Navbar() {
             </button>
             <InstallPWAButton />
             <ThemeToggle />
+            <PendingTransactionsTracker />
             {isConnected && address ? (
               <div className="relative">
                 <button
@@ -311,6 +313,7 @@ export default function Navbar() {
 
           {/* Mobile search + hamburger */}
           <div className="hidden max-md:flex items-center gap-3">
+          <PendingTransactionsTracker />
           <button
             onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT))}
             className="flex items-center justify-center w-8 h-8 text-[var(--muted)] hover:text-[var(--text)] transition-colors"

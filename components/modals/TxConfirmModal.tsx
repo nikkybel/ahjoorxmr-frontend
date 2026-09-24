@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, CheckCircle2, XCircle, ExternalLink, X } from "lucide-react";
+import { addPendingTransaction } from "@/lib/pendingTransactions";
 
 export type TxType = "contribute" | "claim";
 export type TxStatus = "idle" | "pending" | "success" | "error";
@@ -55,6 +56,12 @@ export default function TxConfirmModal({
     try {
       const hash = await onConfirm();
       setTxHash(hash);
+      addPendingTransaction({
+        hash,
+        network: "starknet",
+        label: type === "contribute" ? `Contribution to ${circleName}` : `Claim from ${circleName}`,
+        amount: `${amount.toLocaleString()} USDT`,
+      });
       setStatus("success");
     } catch (err) {
       setErrorMessage(
