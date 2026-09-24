@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Users, DollarSign, Clock, Check } from "lucide-react";
+import { Users, DollarSign, Clock, Check, Copy } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import { truncateAddress, type DiscoverCircle } from "@/data/circles";
 import AutoPayStatusBadge from "@/components/circles/AutoPayStatusBadge";
@@ -13,12 +13,14 @@ interface CircleGridCardProps {
   /** Show the "Join Circle" action (Discover tab) */
   showJoin?: boolean;
   onJoin?: (circle: DiscoverCircle) => void;
+  onDuplicate?: (circle: DiscoverCircle) => void;
 }
 
 export default function CircleGridCard({
   circle,
   showJoin = false,
   onJoin,
+  onDuplicate,
 }: CircleGridCardProps) {
   const fillPct = Math.round((circle.members.length / circle.totalSlots) * 100);
   const isFull = circle.members.length >= circle.totalSlots;
@@ -65,6 +67,17 @@ export default function CircleGridCard({
             {fillPct}%
           </span>
           <BookmarkButton circleId={circle.id} circleName={circle.name} />
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={() => onDuplicate(circle)}
+              aria-label={`Duplicate ${circle.name}`}
+              title="Duplicate circle"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--muted)] hover:bg-[var(--ov-0a)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4B6B76]"
+            >
+              <Copy size={14} aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
 

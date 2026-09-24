@@ -25,6 +25,12 @@ export interface DiscoverCircle {
   nextPayout?: string;
   /** Circle has stopped accepting new activity — bookmarks flag this instead of hiding it. */
   closed?: boolean;
+  description?: string;
+  category?: "family" | "friends" | "community" | "business" | "emergency" | "other";
+  isPrivate?: boolean;
+  penaltyEnabled?: boolean;
+  penaltyType?: "percentage" | "fixed";
+  penaltyValue?: string;
 }
 
 export const MOCK_CIRCLES: DiscoverCircle[] = [

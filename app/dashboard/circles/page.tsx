@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, LayoutGrid, List, Search, Star, X } from "lucide-react";
-import CreateCircleModal from "@/components/modals/CreateCircleModal";
+import CreateCircleModal, { type CreateCircleData } from "@/components/modals/CreateCircleModal";
 import JoinCircleModal, { type JoinCircleData } from "@/components/modals/JoinCircleModal";
 import CircleGridCard from "@/components/circles/CircleGridCard";
 import CircleListRow from "@/components/circles/CircleListRow";
@@ -146,6 +146,8 @@ function CirclesContent() {
   const action = searchParams.get("action");
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [duplicateValues, setDuplicateValues] = useState<Partial<CreateCircleData> | undefined>();
+  const [circles, setCircles] = useState(MOCK_CIRCLES);
   const [joinCircle, setJoinCircle] = useState<JoinCircleData | null>(null);
   const [query, setQuery] = useState("");
 
@@ -155,9 +157,9 @@ function CirclesContent() {
   // Handle invite / create deep-link params
   useEffect(() => {
     if (!inviteId) return;
-    const circle = MOCK_CIRCLES.find((c) => c.id === inviteId);
+    const circle = circles.find((c) => c.id === inviteId);
     if (circle) setJoinCircle(circle);
-  }, [inviteId]);
+  }, [circles, inviteId]);
 
   useEffect(() => {
     if (action === "create") {
@@ -166,6 +168,49 @@ function CirclesContent() {
     }
   }, [action, router]);
 
+  function openCreateCircle() {
+    setDuplicateValues(undefined);
+    setCreateOpen(true);
+  }
+
+  function duplicateCircle(circle: (typeof MOCK_CIRCLES)[number]) {
+    const contribution = circle.contribution.replace(/[^\d.]/g, "");
+    const roundDuration = circle.duration.replace(/[^\d.]/g, "");
+    setDuplicateValues({
+      name: `${circle.name} (Copy)`,
+      description: circle.description ?? "",
+      contribution,
+      maxMembers: String(circle.totalSlots),
+      roundDuration,
+      category: circle.category ?? "family",
+      isPrivate: circle.isPrivate ?? false,
+      penaltyEnabled: circle.penaltyEnabled ?? false,
+      penaltyType: circle.penaltyType ?? "percentage",
+      penaltyValue: circle.penaltyValue ?? "",
+    });
+    setCreateOpen(true);
+  }
+
+  function handleCreateCircle(data: CreateCircleData) {
+    const newCircle = {
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `circle-${Date.now()}`,
+      name: data.name,
+      creator: CURRENT_WALLET,
+      members: [CURRENT_WALLET],
+      totalSlots: Number(data.maxMembers),
+      contribution: `${data.contribution} USDT`,
+      duration: `${data.roundDuration} Days`,
+      description: data.description,
+      category: data.category,
+      isPrivate: data.isPrivate,
+      penaltyEnabled: data.penaltyEnabled,
+      penaltyType: data.penaltyType,
+      penaltyValue: data.penaltyValue,
+    };
+    setCircles((current) => [newCircle, ...current]);
+    setDuplicateValues(undefined);
+  }
+
   const setTab = (t: Tab) => {
     setQuery(""); // clear search when switching tabs
     router.push(`/dashboard/circles?tab=${t}`);
@@ -173,10 +218,10 @@ function CirclesContent() {
 
   // Derive filtered list — memo keeps it cheap on re-render
   const baseCircles = useMemo<DiscoverCircle[]>(() => {
-    if (tab === "my") return MOCK_CIRCLES.filter((c) => c.members.includes(CURRENT_WALLET));
-    if (tab === "bookmarked") return MOCK_CIRCLES.filter((c) => bookmarkedIds.includes(c.id));
-    return MOCK_CIRCLES.filter((c) => !c.members.includes(CURRENT_WALLET));
-  }, [tab, bookmarkedIds]);
+    if (tab === "my") return circles.filter((c) => c.members.includes(CURRENT_WALLET));
+    if (tab === "bookmarked") return circles.filter((c) => bookmarkedIds.includes(c.id));
+    return circles.filter((c) => !c.members.includes(CURRENT_WALLET));
+  }, [circles, tab, bookmarkedIds]);
 
   const displayCircles = useMemo(
     () => filterCirclesByQuery(baseCircles, query),
@@ -196,7 +241,7 @@ function CirclesContent() {
           </h1>
           <div className="h-px bg-[var(--ov-1a)] w-full" aria-hidden="true" />
           <button
-            onClick={() => setCreateOpen(true)}
+            onClick={openCreateCircle}
             className="flex items-center gap-2 shrink-0 px-4 py-2 bg-[#4B6B76] hover:bg-[#3D5A64] text-white text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4B6B76]"
           >
             <Plus size={16} aria-hidden="true" />
@@ -226,9 +271,9 @@ function CirclesContent() {
               My Circles
               <span
                 className="ml-2 text-xs text-[var(--muted)] tabular-nums"
-                aria-label={`${MOCK_CIRCLES.filter((c) => c.members.includes(CURRENT_WALLET)).length} circles`}
+                aria-label={`${circles.filter((c) => c.members.includes(CURRENT_WALLET)).length} circles`}
               >
-                {MOCK_CIRCLES.filter((c) => c.members.includes(CURRENT_WALLET)).length}
+                {circles.filter((c) => c.members.includes(CURRENT_WALLET)).length}
               </span>
             </button>
             <button
@@ -245,9 +290,9 @@ function CirclesContent() {
               Discover
               <span
                 className="ml-2 text-xs text-[var(--muted)] tabular-nums"
-                aria-label={`${MOCK_CIRCLES.filter((c) => !c.members.includes(CURRENT_WALLET)).length} circles`}
+                aria-label={`${circles.filter((c) => !c.members.includes(CURRENT_WALLET)).length} circles`}
               >
-                {MOCK_CIRCLES.filter((c) => !c.members.includes(CURRENT_WALLET)).length}
+                {circles.filter((c) => !c.members.includes(CURRENT_WALLET)).length}
               </span>
             </button>
             <button
@@ -265,9 +310,9 @@ function CirclesContent() {
               Bookmarked
               <span
                 className="ml-2 text-xs text-[var(--muted)] tabular-nums"
-                aria-label={`${MOCK_CIRCLES.filter((c) => bookmarkedIds.includes(c.id)).length} circles`}
+                aria-label={`${circles.filter((c) => bookmarkedIds.includes(c.id)).length} circles`}
               >
-                {MOCK_CIRCLES.filter((c) => bookmarkedIds.includes(c.id)).length}
+                {circles.filter((c) => bookmarkedIds.includes(c.id)).length}
               </span>
             </button>
           </div>
@@ -328,6 +373,7 @@ function CirclesContent() {
                   circle={circle}
                   showJoin={isDiscover || (isBookmarked && !circle.members.includes(CURRENT_WALLET))}
                   onJoin={setJoinCircle}
+                  onDuplicate={tab === "my" && circle.creator.toLowerCase() === CURRENT_WALLET.toLowerCase() ? duplicateCircle : undefined}
                 />
               ))}
             </div>
@@ -345,6 +391,7 @@ function CirclesContent() {
                   circle={circle}
                   showJoin={isDiscover || (isBookmarked && !circle.members.includes(CURRENT_WALLET))}
                   onJoin={setJoinCircle}
+                  onDuplicate={tab === "my" && circle.creator.toLowerCase() === CURRENT_WALLET.toLowerCase() ? duplicateCircle : undefined}
                   even={i % 2 === 1}
                 />
               ))}
@@ -353,7 +400,15 @@ function CirclesContent() {
         </div>
       </div>
 
-      <CreateCircleModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateCircleModal
+        open={createOpen}
+        onClose={() => {
+          setCreateOpen(false);
+          setDuplicateValues(undefined);
+        }}
+        initialValues={duplicateValues}
+        onCreate={handleCreateCircle}
+      />
       <JoinCircleModal
         open={joinCircle !== null}
         onClose={() => {
