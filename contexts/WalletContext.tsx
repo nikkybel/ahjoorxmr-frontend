@@ -8,8 +8,9 @@ import {
   useCallback,
   ReactNode,
 } from "react";
+import { authenticateWithPasskey } from "@/lib/passkeys";
 
-export type WalletId = "argent" | "braavos";
+export type WalletId = "argent" | "braavos" | "passkey";
 
 export interface WalletInfo {
   id: WalletId;
@@ -37,6 +38,7 @@ interface WalletContextValue {
   isConnected: boolean;
   
   connect: (walletId: WalletId) => Promise<void>;
+  signInWithPasskey: () => Promise<void>;
   disconnect: (address?: string) => void;
   setActiveWallet: (address: string) => void;
 }
@@ -47,7 +49,7 @@ const STORAGE_KEY_LINKED = "ahjoor_linked_wallets";
 const STORAGE_KEY_ACTIVE = "ahjoor_active_wallet";
 
 function generateMockAddress(walletId: WalletId): string {
-  const prefix = walletId === "argent" ? "0x01a" : "0x02b";
+  const prefix = walletId === "argent" ? "0x01a" : walletId === "braavos" ? "0x02b" : "0x03c";
   const hex = Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10);
   return `${prefix}${hex.slice(0, 37)}`;
 }
@@ -109,6 +111,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setActiveWalletAddress(addr);
   }, []);
 
+  const signInWithPasskey = useCallback(async () => {
+    await authenticateWithPasskey();
+    const addr = generateMockAddress("passkey");
+    const mockBalance = Number((Math.random() * 5000).toFixed(2));
+
+    setLinkedWallets((prev) => {
+      const newWallets = [...prev, { address: addr, walletId: "passkey" as const, balance: mockBalance }];
+      saveToStorage(newWallets, addr);
+      return newWallets;
+    });
+    setActiveWalletAddress(addr);
+  }, []);
+
   const disconnect = useCallback((addrToRemove?: string) => {
     setLinkedWallets(prev => {
       const targetAddr = addrToRemove || activeWalletAddress;
@@ -136,7 +151,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const activeWallet = linkedWallets.find(w => w.address === activeWalletAddress) || null;
   const walletName = activeWallet 
-    ? (AVAILABLE_WALLETS.find((w) => w.id === activeWallet.walletId)?.name ?? null)
+    ? (AVAILABLE_WALLETS.find((w) => w.id === activeWallet.walletId)?.name ?? (activeWallet.walletId === "passkey" ? "Passkey" : null))
     : null;
 
   return (
@@ -147,7 +162,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         address: activeWalletAddress, 
         walletName, 
         isConnected: !!activeWalletAddress, 
-        connect, 
+        connect,
+        signInWithPasskey,
         disconnect,
         setActiveWallet
       }}

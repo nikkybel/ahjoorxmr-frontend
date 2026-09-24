@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Copy, Check, ChevronDown, X, Search } from "lucide-react";
+import { Copy, Check, ChevronDown, X, Search, KeyRound, Loader2 } from "lucide-react";
 import { useWallet, AVAILABLE_WALLETS, truncateAddress, type WalletId } from "@/contexts/WalletContext";
+import { isPasskeySupported } from "@/lib/passkeys";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/components/ui/CommandPalette";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import InstallPWAButton from "@/components/ui/InstallPWAButton";
@@ -15,8 +16,19 @@ const navLinks = [
   { label: "FAQs", href: "#faq" },
 ];
 
-function WalletSelectModal({ onClose, onSelect }: { onClose: () => void; onSelect: (id: WalletId) => void }) {
+function WalletSelectModal({
+  onClose,
+  onSelect,
+  onPasskey,
+}: {
+  onClose: () => void;
+  onSelect: (id: WalletId) => void;
+  onPasskey: () => Promise<void>;
+}) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
+  const passkeySupported = isPasskeySupported();
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -72,6 +84,38 @@ function WalletSelectModal({ onClose, onSelect }: { onClose: () => void; onSelec
             </button>
           ))}
         </div>
+
+        <div className="my-5 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--faint)]">
+          <span className="h-px flex-1 bg-[var(--ov-10)]" />
+          <span>or</span>
+          <span className="h-px flex-1 bg-[var(--ov-10)]" />
+        </div>
+
+        <button
+          type="button"
+          disabled={!passkeySupported || passkeyBusy}
+          onClick={async () => {
+            setPasskeyBusy(true);
+            setPasskeyError(null);
+            try {
+              await onPasskey();
+            } catch (error) {
+              setPasskeyError(error instanceof Error ? error.message : "Passkey sign-in failed.");
+            } finally {
+              setPasskeyBusy(false);
+            }
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#4B6B76]/50 px-4 py-3.5 text-sm font-semibold text-[var(--text)] transition-colors hover:bg-[#4B6B76]/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {passkeyBusy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <KeyRound size={16} aria-hidden="true" />}
+          {passkeyBusy ? "Waiting for passkey..." : "Sign in with passkey"}
+        </button>
+        {passkeyError && <p role="alert" className="mt-2 text-xs leading-relaxed text-red-500">{passkeyError}</p>}
+        {!passkeySupported && (
+          <p className="mt-2 text-center text-[11px] text-[var(--muted)]">
+            Passkeys are unavailable here. Choose a wallet above instead.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -136,12 +180,17 @@ export default function Navbar() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const { address, isConnected, connect, disconnect } = useWallet();
+  const { address, isConnected, connect, signInWithPasskey, disconnect } = useWallet();
 
   const handleSelectWallet = useCallback(async (walletId: WalletId) => {
     await connect(walletId);
     setShowWalletModal(false);
   }, [connect]);
+
+  const handlePasskeySignIn = useCallback(async () => {
+    await signInWithPasskey();
+    setShowWalletModal(false);
+  }, [signInWithPasskey]);
 
   const handleCopyAddress = useCallback(() => {
     if (!address) return;
@@ -347,6 +396,7 @@ export default function Navbar() {
         <WalletSelectModal
           onClose={() => setShowWalletModal(false)}
           onSelect={handleSelectWallet}
+          onPasskey={handlePasskeySignIn}
         />
       )}
     </>
