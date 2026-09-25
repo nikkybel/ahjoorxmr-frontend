@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import type { CircleJoinRequest, PenaltyConfig } from "@/types/circle";
+import CircleRulesView from "@/components/circles/CircleRulesView";
+import { CIRCLE_RULES_UPDATED_EVENT, getCircleRules, type CircleRulesRecord } from "@/lib/circleRules";
 
 const REQUESTS_KEY = "ahjoorxmr:circle-join-requests";
 
@@ -31,6 +34,8 @@ export default function JoinCircleModal({ open, onClose, circle, currentWallet, 
   const [success, setSuccess] = useState(false);
   const [requestNote, setRequestNote] = useState("");
   const [requestStatus, setRequestStatus] = useState<CircleJoinRequest["status"] | null>(null);
+  const [rules, setRules] = useState<CircleRulesRecord | null>(null);
+  const [rulesAcknowledged, setRulesAcknowledged] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useFocusTrap(ref, open, handleClose);
@@ -48,8 +53,17 @@ export default function JoinCircleModal({ open, onClose, circle, currentWallet, 
     return () => window.removeEventListener("storage", refreshStatus);
   }, [circle, currentWallet, open]);
 
+  useEffect(() => {
+    if (!open || !circle) return;
+    const refreshRules = () => setRules(getCircleRules(circle.id));
+    refreshRules();
+    window.addEventListener(CIRCLE_RULES_UPDATED_EVENT, refreshRules);
+    return () => window.removeEventListener(CIRCLE_RULES_UPDATED_EVENT, refreshRules);
+  }, [circle, open]);
+
   function handleClose() {
     setSuccess(false);
+    setRulesAcknowledged(false);
     onClose();
   }
 
@@ -87,6 +101,7 @@ export default function JoinCircleModal({ open, onClose, circle, currentWallet, 
   const isMember = circle.members.includes(currentWallet);
   const isFull = circle.members.length >= circle.totalSlots;
   const isPrivate = circle.isPrivate === true;
+  const requiresRulesAcknowledgement = rules !== null;
   const penaltySummary = circle.penalty?.enabled
     ? circle.penalty.type === "percentage"
       ? `${circle.penalty.value}% of the contribution when late`
@@ -179,9 +194,25 @@ export default function JoinCircleModal({ open, onClose, circle, currentWallet, 
             {isFull ? (
               <p className="text-red-400 text-sm text-center">This circle is full.</p>
             ) : (
-              <p className="text-[var(--muted)] text-xs">
-                By joining, you agree to contribute {circle.contribution} each round and accept the listed late contribution terms.
-              </p>
+              <>
+                <p className="text-[var(--muted)] text-xs">By joining, you agree to contribute {circle.contribution} each round and accept the listed late contribution terms.</p>
+                {rules ? (
+                  <div className="rounded-xl border border-[var(--ov-14)] bg-[var(--ov-05)] p-4">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--text)]">Circle rules</p>
+                        <Link href={`/dashboard/circles/${circle.id}`} className="text-xs font-medium text-[#4B6B76] hover:underline">View full rules</Link>
+                      </div>
+                      <span className="text-[10px] text-[var(--muted)]">Updated {new Date(rules.updatedAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="max-h-36 overflow-y-auto"><CircleRulesView rules={rules} /></div>
+                    <label className="mt-4 flex items-start gap-2 text-xs text-[var(--text)]">
+                      <input type="checkbox" checked={rulesAcknowledged} onChange={(event) => setRulesAcknowledged(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-[var(--ov-14)] text-[#4B6B76] focus:ring-[#4B6B76]" />
+                      <span>I have read and agree to follow these circle rules.</span>
+                    </label>
+                  </div>
+                ) : <p className="text-xs text-[var(--muted)]">This circle has no published rules yet.</p>}
+              </>
             )}
             {isPrivate && (
               <textarea
@@ -201,7 +232,7 @@ export default function JoinCircleModal({ open, onClose, circle, currentWallet, 
               </button>
               <button
                 onClick={isPrivate ? handleRequest : handleJoin}
-                disabled={joining || isFull}
+                disabled={joining || isFull || (requiresRulesAcknowledgement && !rulesAcknowledged)}
                 className="flex-1 py-2.5 bg-[#4B6B76] hover:bg-[#3D5A64] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4B6B76]"
               >
                 {joining ? "Joining…" : isPrivate ? "Request to Join" : "Confirm Join"}
