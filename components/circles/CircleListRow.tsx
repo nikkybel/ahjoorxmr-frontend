@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Users, DollarSign, Clock, ArrowRight } from "lucide-react";
+import { Users, DollarSign, Clock, ArrowRight, Copy } from "lucide-react";
 import { truncateAddress, type DiscoverCircle } from "@/data/circles";
 import AutoPayStatusBadge from "@/components/circles/AutoPayStatusBadge";
 import BookmarkButton from "@/components/circles/BookmarkButton";
@@ -11,6 +11,7 @@ interface CircleListRowProps {
   circle: DiscoverCircle;
   showJoin?: boolean;
   onJoin?: (circle: DiscoverCircle) => void;
+  onDuplicate?: (circle: DiscoverCircle) => void;
   /** Zebra shading — pass true for even rows */
   even?: boolean;
 }
@@ -19,6 +20,7 @@ export default function CircleListRow({
   circle,
   showJoin = false,
   onJoin,
+  onDuplicate,
   even = false,
 }: CircleListRowProps) {
   const fillPct = Math.round((circle.members.length / circle.totalSlots) * 100);
@@ -89,6 +91,17 @@ export default function CircleListRow({
       {/* ---- Action (always visible, right column on mobile) ---- */}
       <div className="flex items-center justify-end gap-1.5 sm:order-last">
         <BookmarkButton circleId={circle.id} circleName={circle.name} />
+        {onDuplicate && (
+          <button
+            type="button"
+            onClick={() => onDuplicate(circle)}
+            aria-label={`Duplicate ${circle.name}`}
+            title="Duplicate circle"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--muted)] hover:bg-[var(--ov-0a)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4B6B76]"
+          >
+            <Copy size={14} aria-hidden="true" />
+          </button>
+        )}
         {showJoin ? (
           <button
             type="button"

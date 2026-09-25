@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, ArrowRight, ArrowLeft, CheckCircle2, Sparkles } from "lucide-react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import SavingsCalculator from "@/components/calculator/SavingsCalculator";
@@ -11,6 +11,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCreate?: (circle: CreateCircleData) => void;
+  initialValues?: Partial<CreateCircleData>;
 }
 
 export interface CreateCircleData {
@@ -81,12 +82,19 @@ const EMPTY: CreateCircleData = {
 
 const TOTAL_STEPS = 4;
 
-export default function CreateCircleModal({ open, onClose, onCreate }: Props) {
+export default function CreateCircleModal({ open, onClose, onCreate, initialValues }: Props) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<CreateCircleData>(EMPTY);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm({ ...EMPTY, ...initialValues });
+    setStep(initialValues ? 1 : 0);
+    setSuccess(false);
+  }, [open, initialValues]);
 
   useFocusTrap(ref, open, handleClose);
 
