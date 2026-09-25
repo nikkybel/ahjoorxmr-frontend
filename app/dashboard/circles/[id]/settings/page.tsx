@@ -14,6 +14,7 @@ import PayoutDrawModal from "@/components/circles/PayoutDrawModal";
 import { getPayoutDraw, type PayoutDraw } from "@/lib/payoutDraw";
 import AutoPaySection from "@/components/circles/AutoPaySection";
 import AnnouncementComposer from "@/components/circles/AnnouncementComposer";
+import { getCircleRules, saveCircleRules } from "@/lib/circleRules";
 
 const REQUESTS_KEY = "ahjoorxmr:circle-join-requests";
 const NOTIFICATIONS_KEY = "ahjoorxmr:notifications";
@@ -103,6 +104,9 @@ export default function CircleSettingsPage({
   const [roundDuration, setRoundDuration] = useState(circle?.duration.replace(/[^\d.]/g, "") ?? "");
   const [savingDetails, setSavingDetails] = useState(false);
   const [savingContribution, setSavingContribution] = useState(false);
+  const [rulesMarkdown, setRulesMarkdown] = useState(() => getCircleRules(id)?.markdown ?? "");
+  const [rulesUpdatedAt, setRulesUpdatedAt] = useState(() => getCircleRules(id)?.updatedAt ?? null);
+  const [savingRules, setSavingRules] = useState(false);
   const [penaltyEnabled, setPenaltyEnabled] = useState(false);
   const [penaltyType, setPenaltyType] = useState<PenaltyConfig["type"]>("percentage");
   const [penaltyValue, setPenaltyValue] = useState("");
@@ -204,6 +208,18 @@ export default function CircleSettingsPage({
       });
     } finally {
       setSavingContribution(false);
+    }
+  }
+
+  async function handleSaveRules() {
+    setSavingRules(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const saved = saveCircleRules(circle.id, rulesMarkdown);
+      setRulesUpdatedAt(saved?.updatedAt ?? null);
+      showToast({ title: saved ? "Circle rules published" : "Circle rules removed", variant: "success" });
+    } finally {
+      setSavingRules(false);
     }
   }
 
@@ -317,6 +333,31 @@ export default function CircleSettingsPage({
         >
           {savingDetails ? "Saving..." : "Save Details"}
         </button>
+      </section>
+
+      <section className="space-y-5 rounded-2xl bg-[var(--content)] p-6">
+        <div>
+          <h2 className="text-lg font-bold font-sora text-[var(--text)]">Circle Rules / Constitution</h2>
+          <p className="mt-1 text-xs text-[var(--muted)]">Publish contribution expectations, penalty policy, and conduct guidelines for participants to review before joining.</p>
+        </div>
+        <div>
+          <label htmlFor="circle-rules" className="mb-1.5 block text-xs text-[var(--muted)]">Rules in Markdown</label>
+          <textarea
+            id="circle-rules"
+            rows={10}
+            value={rulesMarkdown}
+            onChange={(event) => setRulesMarkdown(event.target.value)}
+            placeholder={'## Contribution expectations\n- Contributions are due by Friday at 18:00 UTC.\n\n## Conduct\nTreat every participant with respect.'}
+            className="w-full resize-y rounded-xl border border-[var(--ov-14)] bg-[var(--ov-0a)] px-4 py-3 font-mono text-sm text-[var(--text)] placeholder:text-[var(--faint)] focus:outline-none focus:ring-2 focus:ring-[#4B6B76]"
+          />
+          <p className="mt-2 text-xs text-[var(--muted)]">Supports headings, bold text, and bulleted or numbered lists. HTML is removed when displayed.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" disabled={savingRules} onClick={handleSaveRules} className="rounded-lg bg-[#4B6B76] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#3D5A64] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4B6B76]">
+            {savingRules ? "Publishing..." : "Publish Rules"}
+          </button>
+          {rulesUpdatedAt && <p className="text-xs text-[var(--muted)]">Last updated {new Date(rulesUpdatedAt).toLocaleString()}</p>}
+        </div>
       </section>
 
       {/* Round settings */}

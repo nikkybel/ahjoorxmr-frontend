@@ -23,6 +23,7 @@ import LowBalanceAlertSettings from "@/components/wallet/LowBalanceAlert";
 import TwoFactorSetup from "@/components/settings/TwoFactorSetup";
 import EmailNotificationPreferences from "@/components/settings/EmailNotificationPreferences";
 import ActiveSessionsManager from "@/components/settings/ActiveSessionsManager";
+import PasskeyManager from "@/components/settings/PasskeyManager";
 import { OPEN_SHORTCUTS_EVENT } from "@/components/ui/ShortcutsModal";
 import { Toggle } from "@/components/ui/Toggle";
 import {
@@ -674,6 +675,9 @@ function SettingsContent() {
 
           {/* Two-Factor Authentication Setup */}
           <TwoFactorSetup accountLabel={connectedAddress ?? "wallet"} />
+
+          {/* Passwordless device sign-in */}
+          <PasskeyManager />
 
           {/* Auto-Logout Timer */}
           <AutoLogoutSection />

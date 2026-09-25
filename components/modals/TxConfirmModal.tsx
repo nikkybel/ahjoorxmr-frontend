@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, CheckCircle2, XCircle, ExternalLink, X } from "lucide-react";
-import GasFeeEstimate from "@/components/modals/GasFeeEstimate";
-import { useGasFeeEstimate } from "@/hooks/useGasFeeEstimate";
-import type { GasFeeEstimate as GasFeeEstimateData, GasFeeRequest } from "@/lib/gasFee";
+import { addPendingTransaction } from "@/lib/pendingTransactions";
 
 export type TxType = "contribute" | "claim";
 export type TxStatus = "idle" | "pending" | "success" | "error";
@@ -96,6 +94,12 @@ export default function TxConfirmModal({
         previousFailure: failure ?? retryFailure,
       });
       setTxHash(hash);
+      addPendingTransaction({
+        hash,
+        network: "starknet",
+        label: type === "contribute" ? `Contribution to ${circleName}` : `Claim from ${circleName}`,
+        amount: `${amount.toLocaleString()} USDT`,
+      });
       setStatus("success");
     } catch (err) {
       const candidate = err as { message?: unknown; hash?: unknown; txHash?: unknown; code?: unknown };

@@ -28,7 +28,8 @@ import { getPayoutDraw, type PayoutDraw } from "@/lib/payoutDraw";
 import { Lock } from "lucide-react";
 import AutoPaySection from "@/components/circles/AutoPaySection";
 import { enableAutoPay, getAutoPayConfig, recordAutoPayAttempt } from "@/lib/autoPay";
-import ContactDirectory from "@/components/circles/ContactDirectory";
+import CircleRulesView from "@/components/circles/CircleRulesView";
+import { CIRCLE_RULES_UPDATED_EVENT, getCircleRules, type CircleRulesRecord } from "@/lib/circleRules";
 
 const CURRENT_WALLET = "0x23g43gdaa8f2c5b1e9d0f7a34bc6e12d8a9f5c3b";
 
@@ -405,9 +406,17 @@ export default function CircleDetailPage({
   );
   const [payoutDraw, setPayoutDraw] = useState<PayoutDraw | null>(null);
   const [announcementEvents, setAnnouncementEvents] = useState<CircleEvent[]>([]);
+  const [circleRules, setCircleRules] = useState<CircleRulesRecord | null>(null);
 
   useEffect(() => {
     setPayoutDraw(getPayoutDraw(id));
+  }, [id]);
+
+  useEffect(() => {
+    const syncRules = () => setCircleRules(getCircleRules(id));
+    syncRules();
+    window.addEventListener(CIRCLE_RULES_UPDATED_EVENT, syncRules);
+    return () => window.removeEventListener(CIRCLE_RULES_UPDATED_EVENT, syncRules);
   }, [id]);
 
   useEffect(() => {
@@ -709,6 +718,23 @@ export default function CircleDetailPage({
           </div>
           <p className="text-xs text-[var(--muted)]">Created {circle.createdAt}</p>
         </div>
+
+        <section className="rounded-2xl bg-[var(--content)] p-6" aria-labelledby="circle-rules-heading">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="circle-rules-heading" className="text-lg font-bold font-sora text-[var(--text)]">Circle Rules / Constitution</h2>
+              {circleRules && <p className="mt-1 text-xs text-[var(--muted)]">Last updated {new Date(circleRules.updatedAt).toLocaleString()}</p>}
+            </div>
+            {canManageCircle && <Link href={`/dashboard/circles/${circle.id}/settings`} className="text-sm font-medium text-[#4B6B76] hover:underline">Edit rules</Link>}
+          </div>
+          <div className="mt-4">
+            {circleRules ? <CircleRulesView rules={circleRules} /> : (
+              <div className="rounded-xl border border-dashed border-[var(--ov-14)] bg-[var(--ov-05)] px-4 py-5 text-sm text-[var(--muted)]">
+                {canManageCircle ? <><p>No rules have been published yet.</p><Link href={`/dashboard/circles/${circle.id}/settings`} className="mt-2 inline-block font-medium text-[#4B6B76] hover:underline">Add circle rules</Link></> : <p>The organizer has not published circle rules yet.</p>}
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Upcoming payout */}
         {circle.status !== "completed" && <div className="bg-[var(--content)] p-6 rounded-2xl space-y-4">

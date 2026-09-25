@@ -3,6 +3,7 @@
 import { use, useMemo, useState } from "react";
 import { ArrowLeft, BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
 import Link from "next/link";
+import ContributionFiatValueChart, { type ContributionRecord } from "@/components/charts/ContributionFiatValueChart";
 
 interface Round {
   round: number;
@@ -27,6 +28,7 @@ interface AnalyticsData {
   participantReliability: ParticipantReliability[];
   totalSaved: number;
   totalPaidOut: number;
+  contributions: ContributionRecord[];
 }
 
 // Mock analytics data shaped to match on-chain response
@@ -44,6 +46,11 @@ const generateMockAnalytics = (circleId: string): AnalyticsData => ({
   ],
   totalSaved: 300,
   totalPaidOut: 200,
+  contributions: [
+    { id: "contribution-1", date: "2024-01-15", amount: 50 },
+    { id: "contribution-2", date: "2024-01-22", amount: 50 },
+    { id: "contribution-3", date: "2024-01-29", amount: 50 },
+  ],
 });
 
 function ContributionTrendChart({ rounds }: { rounds: Round[] }) {
@@ -248,6 +255,7 @@ export default function CircleAnalyticsPage({ params }: { params: Promise<{ id: 
           {/* Charts */}
           <div className="space-y-8">
             <ContributionTrendChart rounds={analytics.rounds} />
+            <ContributionFiatValueChart contributions={analytics.contributions} />
             <ParticipantReliabilityChart participants={analytics.participantReliability} />
           </div>
         </>
